@@ -1,0 +1,5 @@
+.vscode/
+/target
+/examples
+config.toml
+*.log

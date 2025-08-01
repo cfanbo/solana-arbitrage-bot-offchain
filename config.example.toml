@@ -1,0 +1,60 @@
+# 是否为模拟交易，查看详细错误日志时设置为 false。
+simulate_transaction = true
+
+# 检查套利机会的频率(单位ms)，推荐200
+frequency = 1000
+
+# 支持私钥byte字符串、私钥base58字符串 和 私钥路径
+private_key = "[250,107,162,84,39,209,237,78,60,228,187,10,89,62,141,45,21,55,178,51,122,25,40,251,4,237,60,83,79,167,65,214,231,43,128,18,231,37,230,56,133,248,242,215,81,84,240,10,77,225,226,201,92,220,217,10,247,21,251,166,25,15,212,254]"
+
+# 主网 RPC Endpoint
+rpc_endpoint = "https://api.mainnet-beta.solana.com"
+jup_v6_api_base_url = "https://lite-api.jup.ag/swap/v1"
+
+# 日志级别，支持 DEBUG、 INFO, WARN 和 ERROR, 默认 INFO
+# log_level = "DEBUG"
+
+# 报价请求延时（两次quote请求），单位ms。 需保证大于 HTTP_REQUEST_TIMEOUT 配置
+max_latency_ms = 3000
+
+# 每个 http 请求超时时间，单位 ms
+http_request_timeout = 2000
+
+# 最低利润，INPUT_MINT，不考虑优先旨或小费
+min_profit_threshold_amount = 200100
+# 只对传统提交方式有效
+prioritization_fee_lamports = 0
+
+# 本机网卡绑定的多个公网IP，以分号隔开，解决服务端返回 429 错误，可远配置项
+# ips = "4.4.4.4,8.8.8.8"
+
+[swap]
+# 如果使用原生sol则需要设置为 true, 这样每次交易都自动先将sol转换成wSOL,交易完再转回来。如果使用的 wSOL 则需要设置为 false(默认值)，避免来回转换减少指令数量，推荐为使用wSOL
+wrap_and_unwrap_sol = false
+input_mint = "So11111111111111111111111111111111111111112"
+output_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+# input_mint 代币数量, 如果填写数字 800000000 则视为Lamports， 也可以直接填写字符串 "0.8sol"
+input_amount = 800000000
+# 滑点，这里100 表示 1%
+slippage_bps = 100
+# 交易所设置，dexes 与 exclude_dexes 配置项互斥
+dexes = []
+exclude_dexes = []
+
+# jito 配置
+[jito]
+# 是否启用jito提交
+bundle_submit = false
+rpc_endpoint = "https://tokyo.mainnet.block-engine.jito.wtf/api/v1"
+# 固定小费
+tip_amount = 1000
+# 是否启用利润百分比小费，默认不启用
+tip_rate_enabled = false
+# 利润百分比，如 10 表示 10%
+tip_rate = 10
+# 百分比计算时最小小费
+min_tip_amount = 1000
+# 百分比计算时最大小费
+max_tip_amount = 5000
+# 启用bundle状态检测，默认false,强烈推荐false,以减少系统负载
+bundle_statuses_checking = false

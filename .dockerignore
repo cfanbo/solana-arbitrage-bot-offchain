@@ -1,0 +1,32 @@
+# Docker related files
+target/
+Dockerfile.dockerignore
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Config files (don't include actual config in image)
+config.toml
+
+# Git files
+.git/
+.gitignore
+
+# GitHub workflows (not needed in container)
+.github/
+
+# Documentation
+README.md
+CLAUDE.md
+
+# Rust artifacts
+target/
+# Note: Cargo.lock is needed for reproducible builds
