@@ -71,3 +71,20 @@ ips = "4.4.4.4,8.8.8.8"
 由于token的价格在不停的实时变化，因此运行此软件时，需要确保与JUP API（配置项
 `jup_v6_api_base_url`）的网速质量非常的高，才可以大大的提高套利成功的机率，否则可能导致套利失败，并造成一定程序的损失。
 如果启用了`jito`提交交易的话，最好也保证与服务器之间的网速足够的快。
+
+## 常见问题
+
+1. 本软件是否收费
+
+不收任何费用，代码完全开源
+
+2. 软件使用的合约是否开源
+
+合约同样是开源的，项目地址 https://github.com/cfanbo/solana-arbitrage-bot-programs
+
+
+
+## 联系作者
+
+- GitHub: [@cfanbo](https://github.com/cfanbo)
+- Telegram: @mark_guest
