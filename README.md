@@ -14,6 +14,7 @@ Commands:
   version  打印版本信息
   update   检查并更新到最新版本
   run      运行套利主程序
+  init     初始化配置文件
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -62,7 +63,7 @@ ips = "4.4.4.4,8.8.8.8"
 表示每秒进行一次询价，每次询价需要发送两次HTTP请求，而每次请求使用其中一个IP地址。
 
 
-> [!NOTE] 
+> [!NOTE]
 > 更多配置项介绍可参考文件里的注释，默认配置 `simulate_transaction = true` 表示模拟交易，如果在生产环境使用，请设置为 `false`
 
 ## 注意事项
