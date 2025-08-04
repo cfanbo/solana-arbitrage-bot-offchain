@@ -21,6 +21,9 @@ pub struct Config {
     #[serde(default)]
     pub simulate_transaction: bool,
 
+    #[serde(default)]
+    pub skip_preflight: bool,
+
     #[serde(default = "default_rpc_endpoint")]
     pub rpc_endpoint: String,
 

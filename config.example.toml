@@ -1,6 +1,9 @@
 # 是否为模拟交易，查看详细错误日志时设置为 false。
 simulate_transaction = true
 
+# 跳过模拟检查，正式上链时有效
+skip_preflight = false
+
 # 检查套利机会的频率(单位ms)，推荐200
 frequency = 1000
 

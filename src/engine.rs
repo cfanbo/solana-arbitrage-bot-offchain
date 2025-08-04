@@ -13,6 +13,7 @@ use base64::Engine as _;
 use jito_sdk_rust::{JitoJsonRpcSDK, http_client::IpSelectAlgorithm as JitoAlgorithm};
 use serde_json::json;
 use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_program::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::instruction::{AccountMeta, InstructionError};
 use solana_sdk::{
@@ -21,6 +22,7 @@ use solana_sdk::{
     message::{AddressLookupTableAccount, VersionedMessage, v0::Message as V0Message},
     pubkey::Pubkey,
     signature::Keypair,
+    signature::Signature,
     signer::Signer,
     transaction::VersionedTransaction,
 };
@@ -285,8 +287,10 @@ impl Engine {
             }
         };
 
+        let config = config::get_config();
+
         // 交易大小检查
-        if config::get_config().simulate_transaction {
+        if config.simulate_transaction {
             if txs.is_empty() {
                 return Err(anyhow!("未发现任何交易"));
             }
@@ -315,7 +319,7 @@ impl Engine {
             return Ok(());
         } else {
             // JITO bundle
-            if config::get_config().jito.bundle_submit {
+            if config.jito.bundle_submit {
                 // 模拟交易DEBUG
                 // for tx in txs.iter() {
                 //     let sim = rpc_client.simulate_transaction(tx).await?;
@@ -344,7 +348,7 @@ impl Engine {
                             }
 
                             // 启用打包状态检测功能
-                            if config::get_config().jito.bundle_statuses_checking {
+                            if config.jito.bundle_statuses_checking {
                                 _ = jito_tx.send(res["result"].to_string()).await;
                             }
 
@@ -377,7 +381,8 @@ impl Engine {
                 //     return Err(anyhow!("❌ 交易模拟失败\n {:#?}", sim));
                 // }
 
-                match rpc_client.send_and_confirm_transaction(&txs[0]).await {
+                let skip_preflight = config.skip_preflight;
+                match send_transaction_with_options(&rpc_client, &txs[0], skip_preflight).await {
                     Ok(signature) => {
                         println!("✅ 成功发送交易: https://solscan.io/tx/{}\n", signature);
                         return Ok(());
@@ -908,6 +913,38 @@ impl Engine {
             ],
             data: instruction_data,
         }
+    }
+}
+
+async fn send_transaction_with_options(
+    rpc_client: &RpcClient,
+    tx: &VersionedTransaction,
+    skip_preflight: bool,
+) -> Result<Signature> {
+    if skip_preflight {
+        // 跳过预检查的模式
+        let config = RpcSendTransactionConfig {
+            skip_preflight: true,
+            preflight_commitment: None,
+            encoding: None,
+            max_retries: None,
+            min_context_slot: None,
+        };
+
+        let signature = rpc_client.send_transaction_with_config(tx, config).await?;
+
+        // 可以选择是否等待确认
+        let _confirmation = rpc_client
+            .confirm_transaction_with_commitment(&signature, CommitmentConfig::confirmed())
+            .await?;
+
+        Ok(signature)
+    } else {
+        // 使用默认的带预检查的方法
+        rpc_client
+            .send_and_confirm_transaction(tx)
+            .await
+            .map_err(|e| anyhow!("{}", e))
     }
 }
 
