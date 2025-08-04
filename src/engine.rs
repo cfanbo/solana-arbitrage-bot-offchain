@@ -721,7 +721,7 @@ impl Engine {
         // HTTP请求时间太长，本次检测直接视为无效
         if util::latency_too_high(elapsed) {
             debug!(
-                "👁️ Request latency too high ({} ms > {:?}), Ignore!",
+                "👁️ Request latency too long ({} ms > {:?}), Ignore!",
                 elapsed.as_millis(),
                 config.max_latency_ms_to_duration()
             );
