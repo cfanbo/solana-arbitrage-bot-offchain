@@ -5,7 +5,7 @@ use crate::types::{
     PrioritizationFeeLamports, PriorityLevelWithMaxLamports, QuoteResponse, QuoteReuqest, SwapData,
     SwapRequest, SwapResponse,
 };
-use crate::{config, constants, util};
+use crate::{config, constants, error::SwapError, util};
 use anyhow::{Result, anyhow};
 use backoff::ExponentialBackoff;
 use backoff::future::retry;
@@ -15,7 +15,7 @@ use serde_json::json;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_program::address_lookup_table::state::AddressLookupTable;
-use solana_sdk::instruction::{AccountMeta, InstructionError};
+use solana_sdk::instruction::AccountMeta;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     instruction::Instruction,
@@ -32,7 +32,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::time::{Duration, Instant, sleep};
-use tracing::{Level, debug, error, info, warn};
+use tracing::{Level, debug, error, info};
 
 /// 加载 ALT（Address Lookup Table）账户
 async fn load_alt_accounts(
@@ -387,27 +387,24 @@ impl Engine {
                         println!("✅ 成功发送交易: https://solscan.io/tx/{}\n", signature);
                         return Ok(());
                     }
-                    Err(e) => {
-                        let err_str = e.to_string();
-                        // println!("原生错误： {}", err_str);
-                        if err_str.contains("Custom program error: 0x64") {
-                            println!("😭 未实现利润");
-                            return Ok(());
-                        } else if err_str
-                            .contains("Error processing Instruction 3: Custom program error: 0x1")
-                        {
-                            // insufficient funds
-                            warn!("😭 {}", InstructionError::InsufficientFunds);
-                            return Ok(());
-                        } else if err_str.contains(
-                            "Error processing Instruction 3: Custom program error: 0xffff",
-                        ) {
-                            warn!("Error processing Instruction 3: Custom program error: 0xffff");
-                            return Ok(());
+                    Err(e) => match extract_program_error(&e) {
+                        Some((ix, code)) => {
+                            if let Some(e) = SwapError::from_code(code) {
+                                anyhow::bail!(
+                                    "❗ 指令 #{} 失败，错误码: {} (0x{:x})，{}",
+                                    ix,
+                                    code,
+                                    code,
+                                    e
+                                );
+                            }
+
+                            anyhow::bail!("指令 #{} 失败，错误码: {} (0x{:x})", ix, code, code);
                         }
-                        // return Err(anyhow!("❌ 发送交易失败: {}\n {:?}", e, &txs[0]));
-                        return Err(anyhow!("❌ 交易失败: {}", e));
-                    }
+                        None => {
+                            anyhow::bail!("❌ 交易失败: {}", e);
+                        }
+                    },
                 }
             }
         }
@@ -1119,6 +1116,25 @@ fn print_transaction_url(bundle_status: &BundleStatus) {
     } else {
         println!("No transactions found in the bundle status.");
     }
+}
+
+use anyhow::Error;
+use regex::Regex;
+
+fn extract_program_error(e: &Error) -> Option<(usize, u64)> {
+    let err_str = e.to_string();
+
+    // 匹配格式："Instruction 7: Custom program error: 0x1788"
+    let re = Regex::new(r"Instruction (\d+): Custom program error: 0x([0-9a-fA-F]+)").unwrap();
+
+    if let Some(caps) = re.captures(&err_str) {
+        let instruction_index = caps.get(1)?.as_str().parse::<usize>().ok()?;
+        let error_code_hex = caps.get(2)?.as_str();
+        let error_code = u64::from_str_radix(error_code_hex, 16).ok()?;
+        return Some((instruction_index, error_code));
+    }
+
+    None
 }
 
 // #[cfg(test)]
