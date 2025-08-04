@@ -39,6 +39,9 @@ pub struct Config {
     #[serde(default = "default_min_profit_amount")]
     pub min_profit_threshold_amount: u64,
 
+    #[serde(default = "default_min_profit_amount")]
+    pub min_profit_amount: u64,
+
     #[serde(default)]
     pub prioritization_fee_lamports: u64,
 

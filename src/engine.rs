@@ -550,11 +550,10 @@ impl Engine {
             // 添加 check_profit 利润检查指令
             {
                 let current_balance = rpc_client.get_balance(&user_pubkey).await?;
-                let mut min_profit = config::get_config().min_profit_threshold_amount;
-                min_profit = (min_profit as f64 * 0.8) as u64; // 调整最小利润阈值
+                let min_profit_amount = config::get_config().min_profit_amount;
 
                 let check_profit_ix =
-                    Engine::get_check_profit_ix(&payer, current_balance, min_profit).await;
+                    Engine::get_check_profit_ix(&payer, current_balance, min_profit_amount).await;
                 all_instruction_clone.push(check_profit_ix);
             }
 
@@ -893,8 +892,7 @@ impl Engine {
         //     system_program: system_program::id(),
         // }
         //
-        // let config = config::get_config();
-        // let min_profit = config.min_profit_threshold_amount;
+        // let min_profit = config::get_config().min_profit_amount;
         // let current_balance = self.rpc_client.get_balance(&payer.pubkey()).await.unwrap();
 
         // 手续费
