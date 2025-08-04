@@ -23,7 +23,7 @@ max_latency_ms = 3000
 # 每个 http 请求超时时间，单位 ms
 http_request_timeout = 2000
 
-# 你于此利润将跳过不上链，不考虑优先旨或小费(lamport)
+# 低于此利润将跳过不上链，不包含优先旨或小费(lamport)
 min_profit_threshold_amount = 200000
 
 # 最低利润，交易上链时，若低于此利润，交易将回滚以最大程序的减少用户损失，理论上只会损一个基础交易费和优先级
