@@ -551,7 +551,7 @@ impl Engine {
             {
                 let current_balance = rpc_client.get_balance(&user_pubkey).await?;
                 let mut min_profit = config::get_config().min_profit_threshold_amount;
-                min_profit = (min_profit as f64 * 0.1) as u64; // 调整最小利润阈值
+                min_profit = (min_profit as f64 * 0.8) as u64; // 调整最小利润阈值
 
                 let check_profit_ix =
                     Engine::get_check_profit_ix(&payer, current_balance, min_profit).await;
@@ -615,9 +615,9 @@ impl Engine {
         let max_interval = Duration::from_secs(60);
         let multiplier = 1.5;
         let d = ExponentialBackoff {
-            initial_interval: initial_interval,               // 初始延迟 5 秒
-            max_interval: max_interval,                       // 最大延迟 60 秒（避免无限增长）
-            multiplier: multiplier,                           // 每次延迟时间翻倍
+            initial_interval,                                 // 初始延迟 5 秒
+            max_interval,                                     // 最大延迟 60 秒（避免无限增长）
+            multiplier,                                       // 每次延迟时间翻倍
             max_elapsed_time: Some(Duration::from_secs(300)), // 最多重试 5 分钟
             ..ExponentialBackoff::default()
         };
@@ -799,8 +799,8 @@ impl Engine {
         let quote_request = QuoteReuqest {
             input_mint: input_mint.to_string(),
             output_mint: output_mint.to_string(),
-            amount: amount,
-            slippage_bps: slippage_bps,
+            amount,
+            slippage_bps,
             dexes: config::get_config().swap.dexes.clone(),
             exclude_dexes: config::get_config().swap.exclude_dexes.clone(),
             ..Default::default()
