@@ -16,6 +16,7 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_program::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::instruction::AccountMeta;
+use solana_sdk::timing::timestamp;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     instruction::Instruction,
@@ -543,6 +544,14 @@ impl Engine {
                 ));
             }
             // all_instruction_clone.push(Instruction::from(swap_response_clone.cleanup_instruction));
+            //
+            // 备注指令
+            {
+                let memo_string = format!("Memo-{}", timestamp());
+                let memo = memo_string.as_bytes();
+                let memo_instruction = build_memo(memo, &[&payer.pubkey()]);
+                all_instruction_clone.push(memo_instruction);
+            }
 
             // 添加 check_profit 利润检查指令
             {
@@ -940,6 +949,18 @@ async fn send_transaction_with_options(
             .send_and_confirm_transaction(tx)
             .await
             .map_err(|e| anyhow!("{}", e))
+    }
+}
+
+/// 构建一个Memo指令
+pub fn build_memo(memo: &[u8], signer_pubkeys: &[&Pubkey]) -> Instruction {
+    Instruction {
+        program_id: constants::MEMO_PROGRAM_ID,
+        accounts: signer_pubkeys
+            .iter()
+            .map(|&pubkey| AccountMeta::new_readonly(*pubkey, true))
+            .collect(),
+        data: memo.to_vec(),
     }
 }
 
