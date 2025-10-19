@@ -1,5 +1,6 @@
 use crate::blockhash::LatestBlockhash;
 use crate::config::SwapConfig;
+use crate::flashloan::{FlashLoan, Kamino, NoFlashLoan};
 use crate::http_client::{HttpClient, IpSelectAlgorithm};
 use crate::types::{
     PrioritizationFeeLamports, PriorityLevelWithMaxLamports, QuoteResponse, QuoteReuqest, SwapData,
@@ -12,27 +13,29 @@ use backoff::future::retry;
 use base64::Engine as _;
 use jito_sdk_rust::{JitoJsonRpcSDK, http_client::IpSelectAlgorithm as JitoAlgorithm};
 use serde_json::json;
-use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcSendTransactionConfig;
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_program::address_lookup_table::state::AddressLookupTable;
-use solana_sdk::instruction::AccountMeta;
-use solana_sdk::timing::timestamp;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
+    instruction::AccountMeta,
     instruction::Instruction,
     message::{AddressLookupTableAccount, VersionedMessage, v0::Message as V0Message},
     pubkey::Pubkey,
     signature::Keypair,
     signature::Signature,
     signer::Signer,
+    timing::timestamp,
     transaction::VersionedTransaction,
 };
 use solana_sdk_ids::system_program;
-use std::net::IpAddr;
-use std::str::FromStr;
-use std::sync::Arc;
-use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio::time::{Duration, Instant, sleep};
+// use spl_associated_token_account::{
+//     get_associated_token_address, instruction::create_associated_token_account_idempotent,
+// };
+use std::{net::IpAddr, str::FromStr, sync::Arc};
+use tokio::{
+    sync::mpsc::{self, Receiver, Sender},
+    time::{Duration, Instant, sleep},
+};
 use tracing::{Level, debug, error, info};
 
 /// 加载 ALT（Address Lookup Table）账户
@@ -91,14 +94,12 @@ impl Engine {
         mut rx: Receiver<SwapData>,
     ) {
         let config = config::get_config();
-
         let payer = Arc::new(config.keypair());
         let user_pubkey = payer.pubkey();
 
         let rpc_endpoint = config.rpc_endpoint.clone();
 
         let lastest_blockhash = LatestBlockhash::start(rpc_client.clone()).await;
-        // BlockhashCache::init(&rpc_endpoint, Duration::from_secs(30)).await;
 
         let balance: u64;
         // WELCOME
@@ -132,6 +133,14 @@ impl Engine {
 
             balance = rpc_client.get_balance(&user_pubkey).await.unwrap();
             println!("  钱包余额: {}", balance);
+            println!(
+                "  闪电贷：{}",
+                if config.flash_loan.is_some() {
+                    "启用"
+                } else {
+                    "禁用"
+                }
+            );
             println!("  INPUT_MINT: {}", input_mint);
             println!("  OUTPUT_MINT: {}", output_mint);
             println!("  INPUT_AMOUNT: {}", input_amount);
@@ -482,6 +491,36 @@ impl Engine {
             all_instructions.push(tip_tx);
         }
 
+        // 闪电贷会修改此值
+        let current_balance = rpc_client.get_balance(&user_pubkey).await?;
+        println!("current_balance = {}", current_balance);
+
+        // prepare for flashloan
+        let mut use_flashloan = false;
+        let (ipt_mint, ipt_amount) = {
+            let swap = config::get_config().swap.clone();
+            (
+                Pubkey::from_str(&swap.input_mint).unwrap(),
+                swap.input_amount,
+            )
+        };
+
+        // TODO：perf
+        let flashloan: Box<dyn FlashLoan> = if config::get_config().flash_loan.is_some() {
+            let kamino = Kamino::new(
+                rpc_client.clone(),
+                user_pubkey,
+                ipt_amount,
+                Pubkey::from_str(&config::get_config().flash_loan.as_ref().unwrap().reserve)
+                    .unwrap(),
+                ipt_mint,
+            )
+            .await;
+            Box::new(kamino)
+        } else {
+            Box::new(NoFlashLoan)
+        };
+
         // input tx
         {
             // JITO Tip 与 Priority Fee 只设置一个，否则浪费CU
@@ -502,6 +541,33 @@ impl Engine {
                         .into_iter()
                         .map(Instruction::from),
                 );
+            }
+
+            // 创建 ATA 指令
+            // {
+            //     let ata = get_associated_token_address(&user_pubkey, &ipt_mint);
+            //     let ata_ix = create_associated_token_account_idempotent(
+            //         &payer.pubkey(),
+            //         &ata,
+            //         &ipt_mint,
+            //         &spl_token::id(),
+            //     );
+            //     all_instructions.push(ata_ix);
+            // }
+
+            // flashloan borrow ix
+            {
+                if config::get_config().flash_loan.is_some() {
+                    // if current_balance < ipt_amount {
+                    debug!("⚡ 启用闪电贷，借款 {}", ipt_amount);
+                    let borrow_ix = flashloan.borrow(all_instructions.len() as u8).unwrap();
+                    all_instructions.push(borrow_ix);
+
+                    // 更新账户余额，这时将贷款金额计算在内，后面利润保护合约使用
+                    // current_balance = current_balance.checked_add(ipt_amount).unwrap();
+                    use_flashloan = true;
+                    // }
+                }
             }
 
             all_instructions.extend(
@@ -553,9 +619,14 @@ impl Engine {
                 all_instruction_clone.push(memo_instruction);
             }
 
+            // flashloan repay ix
+            if use_flashloan {
+                all_instruction_clone.push(flashloan.repay().unwrap());
+            }
+
             // 添加 check_profit 利润检查指令
             {
-                let current_balance = rpc_client.get_balance(&user_pubkey).await?;
+                // let current_balance = rpc_client.get_balance(&user_pubkey).await?;
                 let min_profit_amount = config::get_config().min_profit_amount;
 
                 let check_profit_ix =

@@ -2,7 +2,9 @@ use once_cell::sync::OnceCell;
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use solana_sdk::signer::keypair::Keypair;
+use std::fmt::Display;
 use std::time::Duration;
 
 use crate::util;
@@ -23,6 +25,12 @@ pub struct Config {
 
     #[serde(default)]
     pub skip_preflight: bool,
+
+    #[serde(default = "default_flash_loan_state")]
+    pub flash_loan_state: FlashLoanState,
+
+    #[serde(default)]
+    pub flash_loan: Option<FlashLoan>,
 
     #[serde(default = "default_rpc_endpoint")]
     pub rpc_endpoint: String,
@@ -219,4 +227,34 @@ pub fn get_config() -> &'static Config {
         let toml_str = std::fs::read_to_string("config.toml").expect("Failed to read config.toml");
         toml::from_str(&toml_str).expect("Failed to parse config.toml")
     })
+}
+
+// flashloan_state
+#[derive(Debug, Clone, Serialize_repr, Deserialize_repr, PartialEq)]
+#[repr(u8)]
+pub enum FlashLoanState {
+    Disabled = 0,
+    Enabled = 1,
+    // ForceEnable = 2,
+}
+fn default_flash_loan_state() -> FlashLoanState {
+    FlashLoanState::Disabled
+}
+impl Display for FlashLoanState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlashLoanState::Disabled => write!(f, "禁用"),
+            FlashLoanState::Enabled => write!(f, "启用"),
+            // FlashLoanState::ForceEnable => write!(f, "强制启用"),
+        }
+    }
+}
+
+#[derive(Deserialize, Default, Clone, Debug, Serialize)]
+pub struct FlashLoan {
+    #[serde(default)]
+    pub reserve: String,
+
+    #[serde(default)]
+    pub borrow_rate: f64,
 }

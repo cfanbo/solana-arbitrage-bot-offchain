@@ -1,7 +1,7 @@
 # 是否为模拟交易，查看详细错误日志时设置为 false。
 simulate_transaction = true
 
-# 交易正式上链时，跳过模拟检查。如果确认获取利润的机会比较多且存在利润，此开启此配置项，将大大加快上链速度，否则将损失交易费和优先费
+# 交易正式上链时，跳过模拟检查。如果确认获取利润的机会比较多，则开启此配置项，将大大加快上链速度，否则将损失交易费和优先费
 skip_preflight = false
 
 # 检查套利机会的频率(单位ms)，推荐200
@@ -66,3 +66,10 @@ min_tip_amount = 1000
 max_tip_amount = 5000
 # 启用bundle状态检测，默认false,强烈推荐false,以减少系统负载
 bundle_statuses_checking = false
+
+# 闪电贷配置，目前只支持 kamino（借款金额为 swap.input_amount）
+[flash_loan]
+# https://kamino.com/borrow/reserve/7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF/d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q
+reserve = "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q"
+# 借款利息，如借款 1SOL，支付利息 0.00001SOL
+borrow_rate = 0.00001
