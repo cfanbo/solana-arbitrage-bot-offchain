@@ -491,10 +491,6 @@ impl Engine {
             all_instructions.push(tip_tx);
         }
 
-        // 闪电贷会修改此值
-        let current_balance = rpc_client.get_balance(&user_pubkey).await?;
-        println!("current_balance = {}", current_balance);
-
         // prepare for flashloan
         let mut use_flashloan = false;
         let (ipt_mint, ipt_amount) = {
@@ -626,7 +622,14 @@ impl Engine {
 
             // 添加 check_profit 利润检查指令
             {
-                // let current_balance = rpc_client.get_balance(&user_pubkey).await?;
+                let current_balance = get_sol_balance_based_on_mode(
+                    rpc_client.clone(),
+                    &user_pubkey,
+                    config::get_config().swap.wrap_and_unwrap_sol,
+                )
+                .await
+                .unwrap();
+
                 let min_profit_amount = config::get_config().min_profit_amount;
 
                 let check_profit_ix =
@@ -975,16 +978,26 @@ impl Engine {
         // 手续费
         let fee_recipient_pubkey = constants::FEE_RECIPIENT_PUBKEY;
 
+        // 根据是否启用 wrap_and_unwrap_sol 选项,检查不同类型账户的余额
+        let user = if config::get_config().swap.wrap_and_unwrap_sol {
+            // SOL账户
+            payer.pubkey()
+        } else {
+            // wSOL ATA账户
+            let wsol_mint = constants::WSOL_MINT;
+            spl_associated_token_account::get_associated_token_address(&payer.pubkey(), &wsol_mint)
+        };
         let mut instruction_data = Vec::new();
         instruction_data.extend_from_slice(&min_profit.to_le_bytes());
         instruction_data.extend_from_slice(&current_balance.to_le_bytes());
 
         Instruction {
-            program_id: constants::CHECK_PROFIT_PROGRAM_ID,
+            program_id: constants::PROFIT_PROTECT_PROGRAM_ID,
             accounts: vec![
-                AccountMeta::new(payer.pubkey(), true), // Payer
-                AccountMeta::new(fee_recipient_pubkey, false),
-                AccountMeta::new_readonly(system_program::ID, false), // Check Profit Account
+                AccountMeta::new(payer.pubkey(), true),        // Payer
+                AccountMeta::new(user, false),                 // Check Profit Account
+                AccountMeta::new(fee_recipient_pubkey, false), // Fee Recipient Account
+                AccountMeta::new_readonly(system_program::ID, false),
             ],
             data: instruction_data,
         }
@@ -1227,6 +1240,44 @@ fn extract_program_error(e: &Error) -> Option<(usize, u64)> {
     }
 
     None
+}
+
+pub async fn get_sol_balance_based_on_mode(
+    rpc_client: Arc<RpcClient>,
+    user_pubkey: &Pubkey,
+    wrap_and_unwrap_sol: bool,
+) -> Result<u64> {
+    if wrap_and_unwrap_sol {
+        // 自动包装/解包模式：使用原生 SOL 余额
+        rpc_client
+            .get_balance(user_pubkey)
+            .await
+            .map_err(|e| e.into())
+    } else {
+        // 手动管理模式：使用 wSOL 余额
+        get_wsol_balance(rpc_client, user_pubkey).await
+    }
+}
+
+/// 获取 wSOL 余额
+pub async fn get_wsol_balance(rpc_client: Arc<RpcClient>, user_pubkey: &Pubkey) -> Result<u64> {
+    // 计算用户的 wSOL ATA 地址
+    let associated_token_address = spl_associated_token_account::get_associated_token_address(
+        user_pubkey,
+        &constants::WSOL_MINT,
+    );
+
+    // 查询代币账户
+    match rpc_client
+        .get_token_account_balance(&associated_token_address)
+        .await
+    {
+        Ok(balance_response) => Ok(balance_response.amount.parse::<u64>().unwrap_or(0)),
+        Err(_) => {
+            // 账户不存在或查询失败，返回 0
+            Ok(0)
+        }
+    }
 }
 
 // #[cfg(test)]
