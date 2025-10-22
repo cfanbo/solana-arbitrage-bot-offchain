@@ -50,6 +50,9 @@ pub struct Config {
     #[serde(default = "default_min_profit_amount")]
     pub min_profit_amount: u64,
 
+    #[serde(default = "default_profit_protect_program_id")]
+    pub profit_protect_program_id: String,
+
     #[serde(default)]
     pub prioritization_fee_lamports: u64,
 
@@ -61,6 +64,10 @@ pub struct Config {
 
     #[serde(default)]
     pub jito: JitoConfig,
+}
+
+fn default_profit_protect_program_id() -> String {
+    "2Ub8nv4khFWaSwJCDda7UMFxviE6Td99VSyLdhiNTNKJ".to_string()
 }
 
 impl Config {

@@ -30,6 +30,9 @@ min_profit_threshold_amount = 200000
 # 由于价格在实时不停的波动，这里设置为 min_profit_threshold_amount 的 80%，表示允许损失 20% 的利润, 最大值为 min_profit_threshold_amount
 min_profit_amount = 160000
 
+# 利润保护合约，防止套利失败造成损失
+profit_protect_program_id = "2Ub8nv4khFWaSwJCDda7UMFxviE6Td99VSyLdhiNTNKJ"
+
 # 只对传统提交方式有效
 prioritization_fee_lamports = 0
 

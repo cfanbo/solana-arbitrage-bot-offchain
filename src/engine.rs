@@ -992,7 +992,7 @@ impl Engine {
         instruction_data.extend_from_slice(&current_balance.to_le_bytes());
 
         Instruction {
-            program_id: constants::PROFIT_PROTECT_PROGRAM_ID,
+            program_id: Pubkey::from_str(&config::get_config().profit_protect_program_id).unwrap(),
             accounts: vec![
                 AccountMeta::new(payer.pubkey(), true),        // Payer
                 AccountMeta::new(user, false),                 // Check Profit Account
