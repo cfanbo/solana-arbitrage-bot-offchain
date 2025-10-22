@@ -519,12 +519,12 @@ mod tests {
         let rpc = RpcClient::new("https://api.mainnet-beta.solana.com".to_string());
 
         let user = pubkey!("2RcgrmyhctsPmYuJmkYApXGj9yqYD3YTybdT4fydxMDZ");
-        let kamino = kamino_new(
+        let kamino = Kamino::new(
             Arc::new(rpc),
             user,
             500000000,
             reserve_pubkey,
-            &mint_sol_pubkey,
+            mint_sol_pubkey,
         )
         .await;
         let ix = kamino.borrow(2);
@@ -540,12 +540,12 @@ mod tests {
         let rpc = RpcClient::new("https://api.mainnet-beta.solana.com".to_string());
 
         let user = pubkey!("2RcgrmyhctsPmYuJmkYApXGj9yqYD3YTybdT4fydxMDZ");
-        let kamino = kamino_new(
+        let kamino = Kamino::new(
             Arc::new(rpc),
             user,
             500000000,
             reserve_pubkey,
-            &mint_sol_pubkey,
+            mint_sol_pubkey,
         )
         .await;
         let ix = kamino.repay();
