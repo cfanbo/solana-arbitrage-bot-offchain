@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
             let status = tokio::task::spawn_blocking(move || {
                 self_update::backends::github::Update::configure()
                     .repo_owner("cfanbo")
-                    .repo_name("solana-arbitrage-bot-onchain")
+                    .repo_name("solana-arbitrage-bot-offchain")
                     .bin_name("arbitrage-bot")
                     .show_download_progress(true)
                     .current_version(&current_version.trim_start_matches('v'))
@@ -138,7 +138,7 @@ async fn run() -> Result<()> {
 fn init_config() -> Result<()> {
     const CONFIG_TEMPLATE: &str = include_str!("../config.example.toml");
     let config_path = "config.toml";
-    
+
     if std::path::Path::new(config_path).exists() {
         println!("⚠️  配置文件 {} 已存在，是否覆盖？(y/N)", config_path);
         let mut input = String::new();
@@ -148,7 +148,7 @@ fn init_config() -> Result<()> {
             return Ok(());
         }
     }
-    
+
     std::fs::write(config_path, CONFIG_TEMPLATE)?;
     println!("✅ 配置文件 {} 已生成，请根据需要修改配置参数", config_path);
     Ok(())
