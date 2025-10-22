@@ -630,7 +630,12 @@ impl Engine {
                 .await
                 .unwrap();
 
-                let min_profit_amount = config::get_config().min_profit_amount;
+                let mut min_profit_amount = config::get_config().min_profit_amount;
+                // 将闪电贷款利润计算在内
+                if use_flashloan {
+                    let fl = config::get_config().flash_loan.as_ref().unwrap();
+                    min_profit_amount += (fl.borrow_rate * 1_000_000_000 as f64) as u64;
+                }
 
                 let check_profit_ix =
                     Engine::get_check_profit_ix(&payer, current_balance, min_profit_amount).await;
