@@ -92,7 +92,7 @@ ips = "4.4.4.4,8.8.8.8"
 
 2. 软件使用的合约是否开源
 
-为了防止套利失败造成损失，当前使用了利润保护合约，它同样是开源的 https://github.com/cfanbo/https://github.com/cfanbo/profit_protect_program ，用户在使用本软件前，请先进行部署此合约，并更新 `profit_protect_program_id` 配置
+为了防止套利失败造成损失，当前使用了利润保护合约，它同样是开源的 https://github.com/cfanbo/profit_protect_program ，用户在使用本软件前，请先进行部署此合约，并更新 `profit_protect_program_id` 配置
 
 
 
