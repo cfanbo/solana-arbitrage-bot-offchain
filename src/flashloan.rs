@@ -512,7 +512,7 @@ mod tests {
 
     #[tokio::test]
     async fn kamino_borrow_ix() {
-        let mint_sol_pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        let mint_sol_pubkey = pubkey!("So11111111111111111111111111111111111111112");
         let reserve_pubkey =
             Pubkey::from_str("d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q").unwrap();
 
@@ -527,7 +527,7 @@ mod tests {
             mint_sol_pubkey,
         )
         .await;
-        let ix = kamino.borrow(2);
+        let ix = kamino.borrow(0);
         println!("FlashLoan Instruction: {:#?}", ix);
     }
 
